@@ -23,32 +23,31 @@
 ##
 ##############################################################################
 
-"""This are the macroserver dummy data recorders"""
+from taurus.external.unittest import TestCase
 
-__all__ = ["DumbRecorder"]
-
-__docformat__ = 'restructuredtext'
-
-from sardana.macroserver.scan.recorder import DataRecorder
+from sardana.sardanabuffer import SardanaBuffer
 
 
-class DumbRecorder(DataRecorder):
+class TestPersistentBuffer(TestCase):
+    """Unit tests for Buffer class"""
 
-    def _startRecordList(self, recordlist):
-        print "Starting new recording"
-        print "# Title :     ", recordlist.getEnvironValue('title')
-        env = recordlist.getEnviron()
-        for envky in env.keys():
-            if envky != 'title' and envky != 'labels':
-                print "# %8s :    %s " % (envky, str(env[envky]))
-        print "# Started:    ", env['starttime']
-        print "# L:  ",
-        print "  ".join([desc.label for desc in env['datadesc']])
+    def setUp(self):
+        self.buffer = SardanaBuffer(persistent=True)
+        self.buffer.extend([1, 2, 3])
 
-    def _writeRecord(self, record):
-        print record.data
+    def test_extend(self):
+        """Test extend method with a simple case of a list."""
+        chunk = [4, 5, 6]
+        self.buffer.extend(chunk)
+        self.assertEqual(self.buffer.get_value(0), 1)
+        self.assertEqual(self.buffer.get_value(5), 6)
+        self.assertEqual(len(self.buffer), 6)
+        self.assertEqual(len(self.buffer.last_chunk), 3)
 
-    def _endRecordList(self, recordlist):
-        print "Ending recording"
-        env = recordlist.getEnviron()
-        print "Recording ended at: ", env['endtime']
+    def test_append(self):
+        """Test if append correctly fills the last_chunk as well as permanently
+        adds the value to the buffer.
+        """
+        self.buffer.append(1)
+        self.assertEqual(len(self.buffer), 4)
+        self.assertEqual(len(self.buffer.last_chunk), 1)

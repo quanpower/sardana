@@ -557,7 +557,7 @@ class Stopable(object):
         Aborts one of the axis
 
         :param int axis: axis number"""
-        raise NotImplementedError("AbortOne must be defined in te controller")
+        raise NotImplementedError("AbortOne must be defined in the controller")
 
     def AbortAll(self):
         """**Controller API**. Override if necessary.
@@ -1005,6 +1005,8 @@ class ZeroDController(Controller, Readable, Stopable):
     standard_axis_attributes = {
         'Value': {'type': float,
                   'description': 'Value', },
+        'Data': {'type': str,
+                 'description': 'Data', },
     }
     standard_axis_attributes.update(Controller.standard_axis_attributes)
 
@@ -1029,6 +1031,8 @@ class OneDController(Controller, Readable, Startable, Stopable, Loadable):
         'Value': {'type': (float,),
                   'description': 'Value',
                   'maxdimsize': (16 * 1024,)},
+        'Data': {'type': str,
+                 'description': 'Data', },
     }
     standard_axis_attributes.update(Controller.standard_axis_attributes)
 
@@ -1038,6 +1042,7 @@ class OneDController(Controller, Readable, Startable, Stopable, Loadable):
     def __init__(self, inst, props, *args, **kwargs):
         Controller.__init__(self, inst, props, *args, **kwargs)
         self._latency_time = 0
+        self._synchronization = AcqSynch.SoftwareTrigger
 
     def GetAxisPar(self, axis, parameter):
         """**Controller API**. Override is MANDATORY.
@@ -1282,7 +1287,7 @@ class PseudoMotorController(PseudoController):
            .. deprecated:: 1.0
                implement :meth:`~PseudoMotorController.CalcPseudo` instead"""
         raise NotImplementedError(
-            "CalcPseudo must be defined in te controller")
+            "CalcPseudo must be defined in the controller")
 
     def calc_physical(self, axis, pseudo_pos):
         """**Pseudo Motor Controller API**. Override is **MANDATORY**.
@@ -1369,6 +1374,8 @@ class PseudoCounterController(Controller):
     standard_axis_attributes = {
         'Value': {'type': float,
                   'description': 'Value', },
+        'Data': {'type': str,
+                 'description': 'Data', },
     }
 
     #: A :obj:`str` representing the controller gender
@@ -1401,7 +1408,7 @@ class PseudoCounterController(Controller):
 
            .. deprecated:: 1.0
                implement :meth:`~PseudoCounterController.Calc` instead"""
-        raise NotImplementedError("Calc must be defined in te controller")
+        raise NotImplementedError("Calc must be defined in the controller")
 
     def CalcAll(self, values):
         """**Pseudo Counter Controller API**. Override if necessary.
@@ -1435,6 +1442,7 @@ class IORegisterController(Controller, Readable):
         'Value': {'type': float,
                   'description': 'Value', },
     }
+    standard_axis_attributes.update(Controller.standard_axis_attributes)
 
     #: A :obj:`str` representing the controller gender
     gender = 'I/O register controller'
@@ -1442,6 +1450,6 @@ class IORegisterController(Controller, Readable):
     def __init__(self, inst, props, *args, **kwargs):
         Controller.__init__(self, inst, props, *args, **kwargs)
 
-    def WriteOne(self):
+    def WriteOne(self, axis, value):
         """**IORegister Controller API**. Override if necessary."""
         pass

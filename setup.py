@@ -44,10 +44,10 @@ packages = find_packages(where="src")
 
 provides = [
     'sardana',
-    'sardana.pool',
-    'sardana.macroserver',
-    'sardana.spock',
-    'sardana.tango',
+    # 'sardana.pool',
+    # 'sardana.macroserver',
+    # 'sardana.spock',
+    # 'sardana.tango',
 ]
 
 requires = [
@@ -55,9 +55,19 @@ requires = [
     # when using PyTango < 9 the dependency is >= 0.0.1 and < 0.1.0
     # when using PyTango >= 9 the dependency is >= 0.1.6
     'itango (>=0.0.1)',
-    'taurus (>= 3.6.0)',
+    'taurus (>= 3.7.4)',
     'lxml (>=2.1)',
+    # ordereddict is necessary for Python < 2.6
+    'ordereddict'
 ]
+
+install_requires = [
+    'PyTango>=7.2.3',
+    'itango>=0.0.1',
+    'taurus>=3.7.4',
+    'lxml>=2.1'
+]
+
 
 console_scripts = [
     "MacroServer = sardana.tango.macroserver:main",
@@ -116,5 +126,6 @@ setup(name='sardana',
       entry_points=entry_points,
       provides=provides,
       requires=requires,
+      install_requires=install_requires,
       test_suite='sardana.test.testsuite.get_sardana_unitsuite',
       )

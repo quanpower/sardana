@@ -586,6 +586,20 @@ class PoolController(PoolBaseController):
         return self.raw_read_axis_states(axes=axes)
 
     def _read_axis_value(self, element):
+
+        def is_chunk(type_, value):
+            if type_ == ElementType.CTExpChannel and is_non_str_seq(value):
+                return True
+            elif (type_ == ElementType.OneDExpChannel and
+                  is_non_str_seq(value)):
+                # empty list is also considered as chunk
+                if (len(value) == 0 or not is_number(value[0])):
+                    return True
+            elif (type_ == ElementType.TwoDExpChannel and len(value) > 0
+                  and not is_number(value[0][0])):
+                return True
+            return False
+
         try:
             axis = element.get_axis()
             type_ = element.get_type()
@@ -594,9 +608,8 @@ class PoolController(PoolBaseController):
                 msg = '%s.ReadOne(%s[%d]) return error: Expected value(s), ' \
                       'got None instead' % (self.name, element.name, axis)
                 raise ValueError(msg)
-            if (type_ == ElementType.CTExpChannel and is_non_str_seq(ctrl_value) or
-                    type_ == ElementType.OneDExpChannel and not is_number(ctrl_value[0]) or
-                    type_ == ElementType.TwoDExpChannel and not is_number(ctrl_value[0][0])):
+
+            if is_chunk(type_, ctrl_value):
                 value = [translate_ctrl_value(v) for v in ctrl_value]
             else:
                 value = translate_ctrl_value(ctrl_value)
@@ -704,10 +717,11 @@ class PoolController(PoolBaseController):
 
     @check_ctrl
     def stop_elements(self, elements=None):
-        """Stops the given elements. If axes is None, stops all active axes.
+        """Stops the given elements.
+           If elements is None, stops all active elements.
 
         :param elements: the list of elements to stop. Default is None
-                         meaning all active axis in this controller
+                         meaning all active elements in this controller
         :type axes: seq<PoolElement> or None
         """
         if elements is None:

@@ -37,12 +37,18 @@ import copy
 import inspect
 import functools
 import traceback
+import threading
 
 from lxml import etree
 
 from PyTango import DevFailed
 
-from taurus.external.ordereddict import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    # For Python < 2.7
+    from ordereddict import OrderedDict
+
 from taurus.core.util.log import Logger
 from taurus.core.util.codecs import CodecFactory
 
@@ -844,6 +850,10 @@ class MacroExecutor(Logger):
         self._stopped = False
         self._paused = False
         self._last_macro_status = None
+        # threading events for synchronization of stopping/abortting of
+        # reserved objects
+        self._stop_done = None
+        self._abort_done = None
 
         name = "%s.%s" % (str(door), self.__class__.__name__)
         self._macro_status_codec = CodecFactory().getCodec('json')
@@ -1060,7 +1070,6 @@ class MacroExecutor(Logger):
         macro_name = meta_macro.name
         macro_id = init_opts.get("id")
         if macro_id is None:
-            macro_id = str(self.getNewMacroID())
             init_opts["id"] = macro_id
         macro_line = self._composeMacroLine(macro_name, macro_params, macro_id)
 
@@ -1071,6 +1080,13 @@ class MacroExecutor(Logger):
 
     def getRunningMacro(self):
         return self._macro_pointer
+
+    def clearRunningMacro(self):
+        """Clear pointer to the running macro.
+
+        ..warning:: Do not call it while the macro is running.
+        """
+        self._macro_pointer = None
 
     def __stopObjects(self):
         """Stops all the reserved objects in the executor"""
@@ -1096,11 +1112,23 @@ class MacroExecutor(Logger):
                     self.warning("Unable to abort %s" % obj)
                     self.debug("Details:", exc_info=1)
 
+    def _setStopDone(self, _):
+        self._stop_done.set()
+
+    def _waitStopDone(self, timeout=None):
+        self._stop_done.wait(timeout)
+
+    def _setAbortDone(self, _):
+        self._abort_done.set()
+
+    def _waitAbortDone(self, timeout=None):
+        self._abort_done.wait(timeout)
+
     def abort(self):
-        self.macro_server.add_job(self._abort, None)
+        self.macro_server.add_job(self._abort, self._setAbortDone)
 
     def stop(self):
-        self.macro_server.add_job(self._stop, None)
+        self.macro_server.add_job(self._stop, self._setStopDone)
 
     def _abort(self):
         m = self.getRunningMacro()
@@ -1165,6 +1193,8 @@ class MacroExecutor(Logger):
         self._macro_stack = []
         self._xml_stack = []
         self._macro_pointer = None
+        self._stop_done = threading.Event()
+        self._abort_done = threading.Event()
         self._aborted = False
         self._stopped = False
         self._paused = False
@@ -1281,9 +1311,11 @@ class MacroExecutor(Logger):
         # make sure the macro's on_abort is called and that a proper macro
         # status is sent
         if self._stopped:
+            self._waitStopDone()
             macro_obj._stopOnError()
             self.sendMacroStatusStop()
         elif self._aborted:
+            self._waitAbortDone()
             macro_obj._abortOnError()
             self.sendMacroStatusAbort()
 

@@ -168,8 +168,7 @@ class OutputRecorder(DataRecorder):
         msg = "Scan #%d started at %s." % (serialno, starttime)
         if not estimatedtime is None:
             estimatedtime = datetime.timedelta(0, abs(estimatedtime))
-            msg += " It will take at least %s\n" % estimatedtime
-            msg += "Moving to start positions..."
+            msg += " It will take at least %s" % estimatedtime
         self._stream.info(msg)
 
         labels, col_names, col_sizes = [], [], []
@@ -243,7 +242,7 @@ class OutputRecorder(DataRecorder):
         totaltimets = endts - startts
         deadtime_perc = deadtime * 100.0 / totaltimets
         motiontime_perc = motiontime * 100.0 / totaltimets
-        info_string = 'Scan #%s ended at %s, taking %s.' + \
+        info_string = 'Scan #%s ended at %s, taking %s. ' + \
                       'Dead time %.1f%% (motion dead time %.1f%%)'
         self._stream.info(info_string % (serialno, endtime, totaltime,
                                          deadtime_perc, motiontime_perc))
